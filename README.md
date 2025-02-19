@@ -5,7 +5,7 @@ Uma calculadora descritiva para algebra linear de nivel iniciante para aparelhos
 Decidir entre:
 
 ```mermaid
-flowchart LR
+flowchart TD
 
 A{Options} -->|Already known| B[Kodular]
 A -->|Seems to give a lot more freedom| C[Kotlin]
