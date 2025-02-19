@@ -1,5 +1,11 @@
 # Mathrizes
-Uma calculadora descritiva para algebra linear de nivel iniciante.
+
+Uma calculadora descritiva para algebra linear de nivel iniciante para aparelhos android.
+
+Decidir entre:
+Kodular / Kotlin / App Inventor
+
+Tasks:
 
 - [ ] Setup mobile
 
@@ -8,5 +14,3 @@ Uma calculadora descritiva para algebra linear de nivel iniciante.
 - [ ] Triangulação
 
 - [ ] Explicação em Latex
-
-
