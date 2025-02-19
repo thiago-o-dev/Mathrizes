@@ -5,13 +5,11 @@ Uma calculadora descritiva para algebra linear de nivel iniciante para aparelhos
 Decidir entre:
 
 ```mermaid
-    ---
-    title: Options
-    ---
-    flowchart LR
-        id1[Kodular]
-        id2[Kotlin]
-        id3[App Inventor]
+flowchart LR
+
+A[Options] -->|Already known| B[Kodular]
+A -->|Seems to give a lot more freedom| C[Kotlin]
+A -->|Older than kodular so more plugins| D[App inventor]
 ```
 
 Tasks:
