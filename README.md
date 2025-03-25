@@ -1,25 +1,11 @@
-# Mathrizes
-
-Uma calculadora descritiva para algebra linear de nivel iniciante para aparelhos android.
-
-Decidir entre:
-
-```mermaid
-flowchart TD
-
-A(Opçoes para produzir o aplicativo) -->|Já programei com, mas é muito limitado| B[Kodular]
-A -->|Aparenta dar muita liberdade e é próximo do C#| C[Kotlin]
-A -->|Mais velho que o kodular, logo mais plugins| D[App inventor]
-A -->|Professor recomendou se ele fosse aprender hoje| E[Flutter]
-A -->|Rápido, mas é menos otimizado| F[NativeScript]
+Se o comando der erro de não autorizado, você pode mudar a politica de execução do escopo com o seguinte comando:
+```bash
+Set-ExecutionPolicy Unrestricted -Scope Process
 ```
 
-Tasks:
+npm install -g typescript
 
-- [ ] Setup mobile
-
-- [ ] Teorema de Laplace
-
-- [ ] Triangulação
-
-- [ ] Explicação em Latex
+Atualizar o ts com:
+```bash
+tsc main.ts
+```
