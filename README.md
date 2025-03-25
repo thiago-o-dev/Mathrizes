@@ -7,5 +7,9 @@ npm install -g typescript
 
 Atualizar o ts com:
 ```bash
-tsc main.ts
+tsc --init
+```
+
+```bash
+tsc
 ```
