@@ -1,11 +1,42 @@
 const matrixContainer = document.getElementById("matrix") as HTMLDivElement;
 const responseContainer = document.getElementById("response") as HTMLDivElement;
 const complementMatrix = document.getElementById("complement-matrix") as HTMLElement;
-let currentMatrix : number[][] = [];
+let currentMatrix: number[][] = [];
 
 declare var MathJax: any; // Declare MathJax globally
 
-function updateMatrixInsertionDiv(matrixSize: number): void{
+function loadMathJax(callback: any) {
+    if (window.MathJax) {
+        callback();
+        return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "MathJax-script";
+    script.async = true;
+    script.src = "https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js";
+    script.onload = () => {
+        console.log("MathJax loaded!");
+        if (callback) callback();
+    };
+
+    document.head.appendChild(script);
+}
+
+function buttonTriangulateMatrix(): void {
+
+    updateCurrentMatrix();
+    var response = gaussianElimination();
+    console.log(response);
+    showLaTeXResponse(response[1]);
+
+    loadMathJax(() => {
+        MathJax.typesetPromise().then(() => console.log("MathJax updated!"))
+            .catch((err: any) => console.error("MathJax processing error:", err));
+    });
+}
+
+function updateMatrixInsertionDiv(matrixSize: number): void {
     matrixContainer.innerHTML = ""; // Limpa a matriz antiga
 
     complementMatrix.innerText = `x ${matrixSize}`;
@@ -33,7 +64,7 @@ function updateMatrixInsertionDiv(matrixSize: number): void{
     }
 }
 
-function updateCurrentMatrix(): void{
+function updateCurrentMatrix(): void {
     const inputs = matrixContainer.getElementsByTagName("input");
     const size = Math.sqrt(inputs.length); // Descobrir o tamanho baseado na quantidade de inputs
 
@@ -46,7 +77,7 @@ function updateCurrentMatrix(): void{
     }
 }
 
-function showLaTeXResponse(lines: string[]): void{
+function showLaTeXResponse(lines: string[]): void {
     responseContainer.innerHTML = "";
 
     lines.forEach(value => {
@@ -56,118 +87,144 @@ function showLaTeXResponse(lines: string[]): void{
     });
 }
 
-function validateMatrix(matrix: number[][]): boolean{
-    if (matrix.length <= 1) 
-       return false;
-    
-    return true;
+// Validação: verifica se a matriz não está vazia e se todas as linhas possuem o mesmo tamanho.
+function validateMatrix(mat: number[][]): boolean {
+    if (!mat || mat.length === 0) return false;
+    const len = mat[0].length;
+    return mat.every(row => row.length === len);
 }
 
-function loadMathJax(callback: any) {
-    if (window.MathJax) {
-        callback();
-        return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "MathJax-script";
-    script.async = true;
-    script.src = "https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js";
-    script.onload = () => {
-        console.log("MathJax loaded!");
-        if (callback) callback();
-    };
-
-    document.head.appendChild(script);
-}
-
-
-function buttonTriangulateMatrix(): void {
-
-    updateCurrentMatrix();
-    var response = triangulateMatrix();
-    console.log(response);
-    showLaTeXResponse(response[1]);
-    
-    loadMathJax(() => {
-        MathJax.typesetPromise().then(() => console.log("MathJax updated!"))
-        .catch((err: any) => console.error("MathJax processing error:", err));
-    });
-}
-
-function triangulateMatrix(): [number[][], string[]] {
+function gaussianElimination(): [number[][], string[]] {
     const matrix = currentMatrix;
-    // Validate matrix
+
     if (!validateMatrix(matrix))
         return [[], ["\\text{Matriz inválida}"]];
 
-    // LaTeX actions for step-by-step visualization
     const actions: string[] = [];
-    
     const n = matrix.length;
-    
-    // Deep copy of the matrix
-    const triangularMatrix = matrix.map(row => [...row]);
+    const m = matrix[0].length;
+    // Define quantas colunas são de coeficientes (supondo sistema quadrado)
+    const numCoeffs = n;
+    // Cópia profunda da matriz
+    let A = matrix.map(row => [...row]);
+    // Inicializa as ações de cada linha (cada linha começa sem ter sido alterada)
+    let rowActions: string[] = [];
 
-    // Initial matrix state
-    actions.push(`\\text{Matriz inicial:} \\quad ${matrixToLatex(triangularMatrix)}`);
+    // Estado inicial
+    actions.push(`\\text{Matriz inicial:} \\quad ${matrixToLatex(
+        A.map(row => row.slice(0, numCoeffs)),
+        (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []),
+        []
+    )}`);
 
+    // Processo de eliminação
     for (let i = 0; i < n; i++) {
-        // Partial pivoting: find the row with the largest absolute value in the current column
-        let maxRowIndex = i;
+        for (let i = 0; i < n; i++) {
+            rowActions[i] = ``;
+        }
+        // Pivoteamento parcial: busca a linha com o maior valor absoluto na coluna i
+        let maxRow = i;
         for (let k = i + 1; k < n; k++) {
-            if (Math.abs(triangularMatrix[k][i]) > Math.abs(triangularMatrix[maxRowIndex][i])) {
-                maxRowIndex = k;
+            if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) {
+                maxRow = k;
             }
         }
 
-        // Swap rows if necessary
-        if (maxRowIndex !== i) {
-            [triangularMatrix[i], triangularMatrix[maxRowIndex]] = [triangularMatrix[maxRowIndex], triangularMatrix[i]];
-            actions.push(`\\text{Trocar } L_{${i+1}} \\text{ com } L_{${maxRowIndex+1}}: \\quad ${matrixToLatex(triangularMatrix)}`);
-        }
-
-        // Check for near-zero pivot (to avoid division by very small numbers)
-        if (Math.abs(triangularMatrix[i][i]) < 1e-10) {
-            actions.push(`\\text{Pivô próximo de zero em } (${i+1},${i+1})`);
+        if (Math.abs(A[maxRow][i]) < 1e-10) {
+            actions.push(`\\text{Pivô próximo de zero em } (${i + 1},${i + 1}).`);
             continue;
         }
 
-        // Eliminate entries below the pivot
+        // Troca de linhas, se necessário
+        if (maxRow !== i) {
+            [A[i], A[maxRow]] = [A[maxRow], A[i]];
+            [rowActions[i], rowActions[maxRow]] = [rowActions[maxRow], rowActions[i]];
+            // Atualiza a notação de ambas as linhas para refletir a troca
+            rowActions[i] = `L_{${i + 1}} \\leftrightarrow L_{${maxRow + 1}}`;
+            rowActions[maxRow] = `L_{${maxRow + 1}} \\leftrightarrow L_{${i + 1}}`;
+            actions.push(`${matrixToLatex(
+                A.map(row => row.slice(0, numCoeffs)),
+                (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []),
+                rowActions
+            )}`);
+        }
+
+        // Eliminação: zera os elementos abaixo do pivô na coluna i
         for (let j = i + 1; j < n; j++) {
-            // Calculate elimination factor
-            const factor = triangularMatrix[j][i] / triangularMatrix[i][i];
-
-            // Log the row operation
-            actions.push(`L_{${j+1}} \\leftarrow L_{${j+1}} - (${factor.toFixed(4)}) L_{${i+1}}`);
-
-            // Perform row elimination
-            for (let k = i; k < n; k++) {
-                triangularMatrix[j][k] -= factor * triangularMatrix[i][k];
+            for (let i = 0; i < n; i++) {
+                rowActions[i] = ``;
             }
-
-            // Show matrix state after elimination
-            actions.push(`\\text{Após eliminação:} \\quad ${matrixToLatex(triangularMatrix)}`);
+            const factor = A[j][i] / A[i][i];
+            // Se o fator for insignificante, não realiza a operação
+            if (Math.abs(factor) < 1e-10) continue;
+            
+            // Atualiza a ação para a linha j
+            rowActions[j] = `L_{${j + 1}} \\leftarrow L_{${j + 1}} - (${factor.toFixed(2)}) L_{${i + 1}}`;
+            // Mostra o estado da matriz após a eliminação
+            actions.push(`${matrixToLatex(
+                A.map(row => row.slice(0, numCoeffs)),
+                (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []),
+                rowActions
+            )}`);
+            
+            // Aplica a operação em todas as colunas da linha j
+            for (let k = i; k < m; k++) {
+                A[j][k] -= factor * A[i][k];
+            }
         }
     }
 
-    // Helper function to convert matrix to LaTeX string
-    function matrixToLatex(mat: number[][]): string {
-        return `\\begin{bmatrix} ${
-            mat.map(row => 
-                row.map(val => val.toFixed(4)).join(' & ')
-            ).join(' \\\\ ')
-        } \\end{bmatrix}`;
+    actions.push(`${matrixToLatex(
+        A.map(row => row.slice(0, numCoeffs)),
+        (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []),
+        []
+    )}`);
+
+    return [A, actions];
+}
+
+// Função auxiliar para converter a matriz em LaTeX, exibindo os coeficientes, os termos independentes (se houver)
+// e a notação das ações realizadas em cada linha.
+function matrixToLatex(
+    coeffMatrix: number[][],
+    constMatrix: number[][],
+    rowActions?: string[]
+): string {
+    const n = coeffMatrix.length;
+    const m = coeffMatrix[0].length;
+    const actionsArr = rowActions ? rowActions.slice() : [];
+    for (let i = 0; i < n; i++) {
+        if (!actionsArr[i]) {
+            // L_{${i + 1}} \\rightarrow L_{${i + 1}}
+            actionsArr[i] = ``;
+        }
     }
 
-    // Validate matrix function
-    function validateMatrix(mat: number[][]): boolean {
-        return mat && 
-               mat.length > 0 && 
-               mat.every(row => row.length === mat.length);
+    // Cria a parte esquerda: matriz dos coeficientes com coluna das ações
+    let leftLatex = `\\begin{array}{|${'c'.repeat(m)}|c}\n`;
+    for (let i = 0; i < n; i++) {
+        leftLatex += coeffMatrix[i]
+            .map(val => val.toFixed(2))
+            .join(' & ');
+        leftLatex += " & " + actionsArr[i] + " \\\\\n";
+    }
+    leftLatex += "\\end{array}";
+
+    // Cria a parte direita: matriz dos termos independentes (se houver)
+    let rightLatex = "";
+    if (constMatrix && constMatrix.length > 0) {
+        const p = constMatrix[0].length;
+        rightLatex += `\\begin{array}{|${'c'.repeat(p)}|}\n`;
+        for (let i = 0; i < constMatrix.length; i++) {
+            rightLatex += constMatrix[i]
+                .map(val => val.toFixed(2))
+                .join(' & ') + " \\\\\n";
+        }
+        rightLatex += "\\end{array}";
     }
 
-    return [triangularMatrix, actions];
+    // Junta as duas partes com uma seta entre elas
+    return `\\begin{array}{c@{\\quad\\rightarrow\\quad}c}\n${leftLatex} & ${rightLatex}\n\\end{array}`;
 }
 
 
