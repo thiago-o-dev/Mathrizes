@@ -49,6 +49,44 @@ function updateMatrixInsertionDiv(matrixSize) {
         matrixContainer.appendChild(row);
     }
 }
+function gcd(a, b) {
+    return b ? gcd(b, a % b) : Math.abs(a);
+}
+function floatToFraction(value, tolerance = 1e-6) {
+    if (value === 0)
+        return "0";
+    // Keep track of the sign and work with absolute value
+    let sign = value < 0 ? "-" : "";
+    value = Math.abs(value);
+    // Initialize continued fraction variables:
+    let h0 = 0, h1 = 1;
+    let k0 = 1, k1 = 0;
+    let b = value;
+    let a = Math.floor(b);
+    // First convergent
+    let h = a * h1 + h0;
+    let k = a * k1 + k0;
+    // Loop until the approximation is within tolerance or denominator is huge
+    while (Math.abs(value - h / k) > tolerance) {
+        b = 1 / (b - a);
+        a = Math.floor(b);
+        let tempH = h;
+        h = a * h + h1;
+        h1 = tempH;
+        let tempK = k;
+        k = a * k + k1;
+        k1 = tempK;
+        // Prevent denominators from growing too large
+        if (k > 1e2)
+            break;
+    }
+    // Simplify the fraction using GCD
+    const divisor = gcd(h, k);
+    h = h / divisor;
+    k = k / divisor;
+    // Return a simple integer if possible, else return a LaTeX fraction
+    return k === 1 ? `${sign}${h}` : `${sign}\\frac{${h}}{${k}}`;
+}
 function updateCurrentMatrix() {
     const inputs = matrixContainer.getElementsByTagName("input");
     const size = Math.sqrt(inputs.length); // Descobrir o tamanho baseado na quantidade de inputs
@@ -127,7 +165,7 @@ function gaussianElimination() {
             if (Math.abs(factor) < 1e-10)
                 continue;
             // Atualiza a ação para a linha j
-            rowActions[j] = `L_{${j + 1}} \\leftarrow L_{${j + 1}} - (${Math.round(factor * 1000) / 1000}) L_{${i + 1}}`;
+            rowActions[j] = `L_{${j + 1}} \\leftarrow L_{${j + 1}} - (${floatToFraction(factor)}) L_{${i + 1}}`;
             // Aplica a operação em todas as colunas da linha j
             for (let k = i; k < m; k++) {
                 A[j][k] -= factor * A[i][k];
@@ -157,7 +195,7 @@ function matrixToLatex(coeffMatrix, constMatrix, rowActions) {
     let leftLatex = `\\begin{array}{| ${'c'.repeat(m)}|l}\n`;
     for (let i = 0; i < n; i++) {
         leftLatex += coeffMatrix[i]
-            .map(val => Math.round(val * 100) / 100)
+            .map(val => floatToFraction(val))
             .join(' & ');
         leftLatex += " & " + actionsArr[i] + " \\\\\n";
     }
@@ -169,7 +207,7 @@ function matrixToLatex(coeffMatrix, constMatrix, rowActions) {
         rightLatex += `\\begin{array}{|${'c'.repeat(p)}|}\n`;
         for (let i = 0; i < constMatrix.length; i++) {
             rightLatex += constMatrix[i]
-                .map(val => Math.round(val * 100) / 100)
+                .map(val => floatToFraction(val))
                 .join(' & ') + " \\\\\n";
         }
         rightLatex += "\\end{array}";
