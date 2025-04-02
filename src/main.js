@@ -90,7 +90,7 @@ function gaussianElimination() {
     // Estado inicial
     actions.push(`\\text{Matriz inicial:} \\quad ${matrixToLatex(A.map(row => row.slice(0, numCoeffs)), (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []), [])}`);
     // Processo de eliminação
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < n - 1; i++) {
         for (let i = 0; i < n; i++) {
             rowActions[i] = ``;
         }
@@ -102,36 +102,41 @@ function gaussianElimination() {
             }
         }
         if (Math.abs(A[maxRow][i]) < 1e-10) {
-            actions.push(`\\text{Pivô próximo de zero em } (${i + 1},${i + 1}).`);
+            actions.push(`\\text{Pivô já zerado em } (${i + 1},${i + 1}).`);
             continue;
         }
         // Troca de linhas, se necessário
-        if (maxRow !== i) {
+        if (A[i][i] == 0) {
+            var matrixBeforeAction = A.map(row => row.slice(0, numCoeffs));
             [A[i], A[maxRow]] = [A[maxRow], A[i]];
             [rowActions[i], rowActions[maxRow]] = [rowActions[maxRow], rowActions[i]];
             // Atualiza a notação de ambas as linhas para refletir a troca
             rowActions[i] = `L_{${i + 1}} \\leftrightarrow L_{${maxRow + 1}}`;
             rowActions[maxRow] = `L_{${maxRow + 1}} \\leftrightarrow L_{${i + 1}}`;
-            actions.push(`${matrixToLatex(A.map(row => row.slice(0, numCoeffs)), (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []), rowActions)}`);
+            actions.push(`${matrixToLatex(matrixBeforeAction, A.map(row => row.slice(0, numCoeffs)), rowActions)}`);
         }
+        var changeFlag = false;
+        for (let i = 0; i < n; i++) {
+            rowActions[i] = ``;
+        }
+        var matrixBeforeAction = A.map(row => row.slice(0, numCoeffs));
         // Eliminação: zera os elementos abaixo do pivô na coluna i
         for (let j = i + 1; j < n; j++) {
-            for (let i = 0; i < n; i++) {
-                rowActions[i] = ``;
-            }
             const factor = A[j][i] / A[i][i];
             // Se o fator for insignificante, não realiza a operação
             if (Math.abs(factor) < 1e-10)
                 continue;
             // Atualiza a ação para a linha j
-            rowActions[j] = `L_{${j + 1}} \\leftarrow L_{${j + 1}} - (${factor.toFixed(2)}) L_{${i + 1}}`;
-            // Mostra o estado da matriz após a eliminação
-            actions.push(`${matrixToLatex(A.map(row => row.slice(0, numCoeffs)), (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []), rowActions)}`);
+            rowActions[j] = `L_{${j + 1}} \\leftarrow L_{${j + 1}} - (${Math.round(factor * 1000) / 1000}) L_{${i + 1}}`;
             // Aplica a operação em todas as colunas da linha j
             for (let k = i; k < m; k++) {
                 A[j][k] -= factor * A[i][k];
             }
+            changeFlag = true;
         }
+        if (changeFlag)
+            // Mostra o estado da matriz após as eliminações se foi encontrada mudanças
+            actions.push(`${matrixToLatex(matrixBeforeAction, A.map(row => row.slice(0, numCoeffs)), rowActions)}`);
     }
     actions.push(`${matrixToLatex(A.map(row => row.slice(0, numCoeffs)), (m > numCoeffs ? A.map(row => row.slice(numCoeffs)) : []), [])}`);
     return [A, actions];
@@ -149,10 +154,10 @@ function matrixToLatex(coeffMatrix, constMatrix, rowActions) {
         }
     }
     // Cria a parte esquerda: matriz dos coeficientes com coluna das ações
-    let leftLatex = `\\begin{array}{|${'c'.repeat(m)}|c}\n`;
+    let leftLatex = `\\begin{array}{| ${'c'.repeat(m)}|l}\n`;
     for (let i = 0; i < n; i++) {
         leftLatex += coeffMatrix[i]
-            .map(val => val.toFixed(2))
+            .map(val => Math.round(val * 100) / 100)
             .join(' & ');
         leftLatex += " & " + actionsArr[i] + " \\\\\n";
     }
@@ -164,13 +169,15 @@ function matrixToLatex(coeffMatrix, constMatrix, rowActions) {
         rightLatex += `\\begin{array}{|${'c'.repeat(p)}|}\n`;
         for (let i = 0; i < constMatrix.length; i++) {
             rightLatex += constMatrix[i]
-                .map(val => val.toFixed(2))
+                .map(val => Math.round(val * 100) / 100)
                 .join(' & ') + " \\\\\n";
         }
         rightLatex += "\\end{array}";
     }
     // Junta as duas partes com uma seta entre elas
-    return `\\begin{array}{c@{\\quad\\rightarrow\\quad}c}\n${leftLatex} & ${rightLatex}\n\\end{array}`;
+    if (rightLatex == "")
+        return `\\begin{array}{ccc}\n${leftLatex} && \n${rightLatex}\n\\end{array}`;
+    return `\\begin{array}{ccc}\n${leftLatex} &\\because& \n${rightLatex}\n\\end{array}`;
 }
 updateMatrixInsertionDiv(2);
 showLaTeXResponse(["\\text{Aperte o botão que quiser e calcule a matriz que você inseriu.}"]);
